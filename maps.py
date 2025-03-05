@@ -1,9 +1,10 @@
-from typing import Union
+from typing import Union, List
 
 import googlemaps
 from datetime import datetime, timedelta, date
 import humanize
 from secrets import maps_key
+
 
 
 class Location:
@@ -40,20 +41,23 @@ class Leg:
 
 
 class Route:
-    def __init__(self, frm: Location, to: Location, mid: Location, leave: datetime, modes = ('bicycling', 'transit')):
-        self.frm = frm
-        self.to = to
-        self.mid = mid
+    def __init__(self, leave: datetime, modes = ('bicycling', 'transit'), locations: List[Location]=None):
+        self.locations = locations
         self.leave = leave
         self.modes = modes
-        self.legs = self._get_legs()
         self.final_arrive = None
+        self.route_legs = self._get_legs()
 
-    def _get_legs(self):
-        leg_to_mid = _get_arrival(self.modes[0], self.frm, self.mid, self.leave)
-        leg_mid_to_to = _get_arrival(self.modes[1], self.mid, self.to, leg_to_mid.arrive_time)
-        self.final_arrive = leg_mid_to_to.arrive_time
-        legs = [leg_to_mid, leg_mid_to_to]
+    def _get_legs(self) -> List[Leg]:
+        legs = []
+        for i in range(len(self.locations) - 1):
+            if i == 0:
+                leave = self.leave
+            else:
+                leave = legs[-1].arrive_time
+            leg = _get_arrival(self.modes[i], self.locations[i], self.locations[i + 1], leave)
+            legs.append(leg)
+        self.final_arrive = legs[-1].arrive_time
         return legs
 
     def _leave_by(self, leg: Leg) -> str:
@@ -61,31 +65,31 @@ class Route:
         return humanize.naturaldelta(delta)
 
     def leave_by(self):
-        leg = self.legs[0]
+        leg = self.route_legs[0]
 
         if self.modes[0] == 'bicycling':
-            leg = get_biking_arrival(leg.start, leg.end, None, arrive_by=self.legs[1].depart_time)
-            print(f'Must leave by {leg.depart_time.time()} to catch the train ({self._leave_by(leg)})')
+            leg = _get_arrival('bicycling', leg.start, leg.end, None, arrive_by=self.route_legs[1].depart_time)
         else:
-            leg = get_transit_arrival(leg.start, leg.end, self.leave)
-            print(f'Must leave by {leg.depart_time.time()} to catch the train ({self._leave_by(leg)})')
+            leg = _get_arrival('transit', leg.start, leg.end, self.leave)
+
+        print(f'Must leave by {leg.depart_time.time()} to catch the train ({self._leave_by(leg)})')
 
         return leg.depart_time
 
     @property
     def bike_leg(self):
-        return [l for l in self.legs if l.mode == 'bicycling'][0]
+        return [l for l in self.route_legs if l.mode == 'bicycling'][0]
 
     @property
     def transit_leg(self):
-        return [l for l in self.legs if l.mode == 'transit'][0]
+        return [l for l in self.route_legs if l.mode == 'transit'][0]
 
     @property
     def arrive_by(self):
-        return max(self.bike_leg.arrive_time, self.transit_leg.arrive_time)
+        return max([l.arrive_time for l in self.route_legs])
 
     def __str__(self):
-        return f"{self.legs}"
+        return f"{self.route_legs}"
 
     def __repr__(self):
         return self.__str__()
@@ -142,37 +146,48 @@ def get_transit_arrival(frm: Location, to: Location, leave=datetime.now()) -> Le
     return leg
 
 
-def _get_arrival(mode, frm: Location, to: Location, leave=datetime.now()):
+def _get_arrival(mode, *args, **kwargs) -> Leg:
     if mode == 'bicycling':
-        return get_biking_arrival(frm, to, leave)
+        return get_biking_arrival(*args, **kwargs)
     if mode == 'transit':
-        return get_transit_arrival(frm, to, leave)
+        return get_transit_arrival(*args, **kwargs)
 
 
 def _print_to_work_option(route: Route):
     print(
-        f"Take {route.bike_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ Embarcadero by {route.arrive_by.time()}")
+        f"Take {route.bike_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ {route.locations[-1].name} by {route.arrive_by.time()}")
 
-def _print_route(route: Route):
-    if route.modes[0] == 'bicycling':
-        print(
-            f"Take {route.bike_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ Embarcadero by {route.arrive_by.time()}")
-    else:
-        print(
-            f"Take {route.transit_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ home by {route.arrive_by.time()}")
+def _print_route(route: Route, verbose: bool):
+    print(
+        f"Take {route.bike_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ {route.locations[-1].name} by {route.arrive_by.time()}")
+    if verbose:
+        for i in range(len(route.route_legs)):
+            print('\t', route.locations[i].name, "->", route.locations[i+1].name, route.route_legs[i].depart_time, "->", route.route_legs[i].arrive_time)
 
 
-def to_work_options(leave=datetime.now()) -> Route:
-    route_19 = Route(HOME, BART_EMBARCADERO, BART_19TH, leave)
-    route_lake = Route(HOME, BART_EMBARCADERO, BART_LAKE_MERRITT, leave)
+def to_work_options(leave=None, verbose=False) -> Route:
+    if leave is None:
+        leave = datetime.now()
+    route_19 = Route(leave, locations=[HOME, BART_19TH, BART_EMBARCADERO, OFFICE], modes=['bicycling', 'transit', 'bicycling'])
+    route_lake = Route(leave, locations=[HOME, BART_LAKE_MERRITT, BART_EMBARCADERO, OFFICE], modes=['bicycling', 'transit', 'bicycling'])
     min_route = min(route_19, route_lake, key=lambda r: r.arrive_by)
-    _print_route(min_route)
+    _print_route(min_route, verbose)
     return min_route
 
 
-def to_home_options(leave=datetime.now()) -> Route:
-    route_19 = Route(OFFICE, BART_EMBARCADERO, BART_19TH, leave, ['transit', 'bicycling'])
-    route_lake = Route(OFFICE, BART_EMBARCADERO, BART_LAKE_MERRITT, leave, ['transit', 'bicycling'])
+def to_home_options(leave=None, verbose=False) -> Route:
+    if leave is None:
+        leave = datetime.now()
+    route_19 = Route(leave,  locations=[OFFICE, BART_EMBARCADERO, BART_19TH, HOME], modes=['bicycling', 'transit', 'bicycling'])
+    route_lake = Route(leave, locations=[OFFICE, BART_EMBARCADERO, BART_LAKE_MERRITT, HOME], modes=['bicycling', 'transit', 'bicycling'])
     min_route = min(route_19, route_lake, key=lambda r: r.arrive_by)
-    _print_route(min_route)
+    _print_route(min_route, verbose)
     return min_route
+
+def get_options(dest: str, leave=None, verbose=False):
+    return to_work_options(leave, verbose) if dest == 'work' else to_home_options(leave, verbose)
+
+if __name__ == '__main__':
+    r = to_work_options()
+    r.leave_by()
+    print(r.final_arrive)
