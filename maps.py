@@ -40,17 +40,18 @@ class Leg:
 
 
 class Route:
-    def __init__(self, frm: Location, to: Location, mid: Location, leave: datetime):
+    def __init__(self, frm: Location, to: Location, mid: Location, leave: datetime, modes = ('bicycling', 'transit')):
         self.frm = frm
         self.to = to
         self.mid = mid
         self.leave = leave
+        self.modes = modes
         self.legs = self._get_legs()
         self.final_arrive = None
 
     def _get_legs(self):
-        leg_to_mid = get_biking_arrival(self.frm, self.mid, self.leave)
-        leg_mid_to_to = get_transit_arrival(self.mid, self.to, leg_to_mid.arrive_time)
+        leg_to_mid = _get_arrival(self.modes[0], self.frm, self.mid, self.leave)
+        leg_mid_to_to = _get_arrival(self.modes[1], self.mid, self.to, leg_to_mid.arrive_time)
         self.final_arrive = leg_mid_to_to.arrive_time
         legs = [leg_to_mid, leg_mid_to_to]
         return legs
@@ -61,9 +62,13 @@ class Route:
 
     def leave_by(self):
         leg = self.legs[0]
-        leg = get_biking_arrival(leg.start, leg.end, None, arrive_by=self.legs[1].depart_time)
 
-        print(f'Must leave by {leg.depart_time.time()} to catch the train ({self._leave_by(leg)})')
+        if self.modes[0] == 'bicycling':
+            leg = get_biking_arrival(leg.start, leg.end, None, arrive_by=self.legs[1].depart_time)
+            print(f'Must leave by {leg.depart_time.time()} to catch the train ({self._leave_by(leg)})')
+        else:
+            leg = get_transit_arrival(leg.start, leg.end, self.leave)
+            print(f'Must leave by {leg.depart_time.time()} to catch the train ({self._leave_by(leg)})')
 
         return leg.depart_time
 
@@ -86,7 +91,7 @@ class Route:
         return self.__str__()
 
 
-MANDANA = Location('Home', "926 Mandana Blvd, Oakland, CA, 94610")
+HOME = Location('Home', "926 Mandana Blvd, Oakland, CA, 94610")
 BART_19TH = Location('19th', "19th St. Oakland BART Station, 1900 Broadway, Oakland, CA 94612")
 BART_LAKE_MERRITT = Location('Lake Merritt', "Lake Merritt BART Station, 800 Madison St, Oakland, CA 94607")
 OFFICE = Location('Office', '181 Fremont St, San Francisco, CA 94105')
@@ -148,27 +153,26 @@ def _print_to_work_option(route: Route):
     print(
         f"Take {route.bike_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ Embarcadero by {route.arrive_by.time()}")
 
+def _print_route(route: Route):
+    if route.modes[0] == 'bicycling':
+        print(
+            f"Take {route.bike_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ Embarcadero by {route.arrive_by.time()}")
+    else:
+        print(
+            f"Take {route.transit_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ home by {route.arrive_by.time()}")
+
 
 def to_work_options(leave=datetime.now()) -> Route:
-    route_19 = Route(MANDANA, BART_EMBARCADERO, BART_19TH, leave)
-    route_lake = Route(MANDANA, BART_EMBARCADERO, BART_LAKE_MERRITT, leave)
+    route_19 = Route(HOME, BART_EMBARCADERO, BART_19TH, leave)
+    route_lake = Route(HOME, BART_EMBARCADERO, BART_LAKE_MERRITT, leave)
     min_route = min(route_19, route_lake, key=lambda r: r.arrive_by)
-    _print_to_work_option(min_route)
+    _print_route(min_route)
     return min_route
 
 
 def to_home_options(leave=datetime.now()) -> Route:
-    leg_to_19th = get_transit_arrival(BART_EMBARCADERO, BART_19TH, leave)
-    leg_19th_to_home = get_biking_arrival(BART_19TH, MANDANA, leg_to_19th.arrive_time)
-
-    leg_to_lake_merritt = get_transit_arrival(BART_EMBARCADERO, BART_LAKE_MERRITT, leave)
-    leg_lake_merritt_to_home = get_biking_arrival(BART_LAKE_MERRITT, MANDANA, leg_to_lake_merritt.arrive_time)
-
-    if leg_19th_to_home.arrive_time < leg_lake_merritt_to_home.arrive_time:
-        print(
-            f"Take 19th, train leaves at {leg_to_19th.depart_time.time()}, arrive @ home by {leg_19th_to_home.arrive_time.time()}")
-        return Route(MANDANA, BART_EMBARCADERO, BART_19TH, leave)
-    else:
-        print(
-            f"Take Lake Merritt, train leaves at {leg_to_lake_merritt.depart_time.time()}, arrive @ home by {leg_lake_merritt_to_home.arrive_time.time()}")
-        return Route(MANDANA, BART_EMBARCADERO, BART_LAKE_MERRITT, leave)
+    route_19 = Route(OFFICE, BART_EMBARCADERO, BART_19TH, leave, ['transit', 'bicycling'])
+    route_lake = Route(OFFICE, BART_EMBARCADERO, BART_LAKE_MERRITT, leave, ['transit', 'bicycling'])
+    min_route = min(route_19, route_lake, key=lambda r: r.arrive_by)
+    _print_route(min_route)
+    return min_route
