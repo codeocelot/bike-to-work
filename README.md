@@ -23,34 +23,32 @@ Computes the time it takes to bike from the office to Embarcadero station. It th
 
 Admittedly, this is a bit less useful than the to-work calculation, since I always leave Embarcadero and trains always leave pretty frequently during commute hours.
 
-```
-
 ## Setup
 
-### Install deps
+### Install
 
 ```bash
-pip install -r requirements.txt
+pip install git+https://github.com/codeocelot/bike-to-work
 ```
 
 Write secrets
 
 ```bash
-echo "MAPS_API_KEY=$MAPS_API_KEY" > .env
+echo "MAPS_API_KEY=$MAPS_API_KEY" > ~/.bike2work.env
+# or 
+export MAPS_API_KEY=...
 ```
 
 ### Run
 
 ```bash
-python main.py --direction work
+python -m bike2work --direction work
 ```
 
 ### Options
 
 ```bash
-python main.py --help
-
-usage: main.py [-h] [--direction DIRECTION] [-v] [--leave LEAVE] [-c COUNT]
+usage: __main__.py [-h] [--direction DIRECTION] [-v] [--leave LEAVE] [-c COUNT]
 
 options:
   -h, --help            show this help message and exit
@@ -65,7 +63,7 @@ options:
 ### Examples
 
 ```bash
-python main.py --direction work -c 3 -v
+python -m bike2work --direction work -c 3 -v
 
 Take 19th, train leaves at 10:52:46, arrive @ Office by 11:13:41
 	 Home -> 19th 10:36:39.650759 -> 10:51:36.650759
@@ -91,7 +89,7 @@ Must leave by 10:42:37 to catch the train (5 minutes)
 ### Tests
 
 ```bash
-pytest test_maps.py
+pytest
 ```
 
 ### Extensions

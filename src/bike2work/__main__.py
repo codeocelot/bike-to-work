@@ -1,6 +1,6 @@
 import argparse
-from datetime import timedelta, datetime
-from maps import to_home_options, to_work_options, get_options
+from datetime import timedelta
+from .maps import get_options
 from datetime import datetime
 from dateutil.parser import parse
 

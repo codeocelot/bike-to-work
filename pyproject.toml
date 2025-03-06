@@ -1,0 +1,9 @@
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0", "wheel"]
+
+[project]
+name = "bike2work"
+version = "0.0.1"
+readme = "README.md"
+dependencies = ['build==1.2.2.post1', 'certifi==2025.1.31', 'charset-normalizer==3.4.1', 'exceptiongroup==1.2.2', 'googlemaps==4.10.0', 'humanize==4.12.1', 'idna==3.10', 'iniconfig==2.0.0', 'packaging==24.2', 'pluggy==1.5.0', 'pyproject_hooks==1.2.0', 'pytest==8.3.5', 'python-dateutil==2.9.0.post0', 'python-dotenv==1.0.1', 'requests==2.32.3', 'six==1.17.0', 'tomli==2.2.1', 'urllib3==2.3.0']

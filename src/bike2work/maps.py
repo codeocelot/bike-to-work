@@ -1,10 +1,11 @@
+from functools import cached_property
 from typing import Union, List
 
 import googlemaps
 from datetime import datetime, timedelta, date
 import humanize
-from secrets import maps_key
 
+from .secrets import maps_key
 
 
 class Location:
@@ -46,7 +47,10 @@ class Route:
         self.leave = leave
         self.modes = modes
         self.final_arrive = None
-        self.route_legs = self._get_legs()
+
+    @cached_property
+    def route_legs(self):
+        return self._get_legs()
 
     def _get_legs(self) -> List[Leg]:
         legs = []
@@ -104,7 +108,6 @@ BART_EMBARCADERO = Location('Embarcadero', 'Embarcadero BART Station, 1 Market S
 BART_OAKLAND_STATIONS = [BART_19TH, BART_LAKE_MERRITT]
 BART_SF_STATIONS = [BART_EMBARCADERO],
 
-gmaps = googlemaps.Client(key=maps_key)
 
 
 def get_biking_arrival(frm: Location, to: Location, leave: Union[datetime, None] = datetime.now(),
@@ -117,6 +120,8 @@ def get_biking_arrival(frm: Location, to: Location, leave: Union[datetime, None]
     if leave:
         ex_args['departure_time'] = leave
         ex_args['traffic_model'] = 'best_guess'
+
+    gmaps = googlemaps.Client(key=maps_key)
     resp = gmaps.directions(frm.address, to.address, mode="bicycling", **ex_args)
     duration = resp[0]['legs'][0]['duration']['value']
     duration = timedelta(seconds=duration)
@@ -133,6 +138,7 @@ def get_biking_arrival(frm: Location, to: Location, leave: Union[datetime, None]
 
 
 def get_transit_arrival(frm: Location, to: Location, leave=datetime.now()) -> Leg:
+    gmaps = googlemaps.Client(key=maps_key)
     resp = gmaps.directions(frm.address, to.address, mode="transit", departure_time=leave, traffic_model="best_guess")
     all_legs = resp[0]['legs']
     if len(all_legs) > 1:
