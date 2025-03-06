@@ -162,7 +162,7 @@ def _print_route(route: Route, verbose: bool):
         f"Take {route.bike_leg.end.name}, train leaves at {route.transit_leg.depart_time.time()}, arrive @ {route.locations[-1].name} by {route.arrive_by.time()}")
     if verbose:
         for i in range(len(route.route_legs)):
-            print('\t', route.locations[i].name, "->", route.locations[i+1].name, route.route_legs[i].depart_time, "->", route.route_legs[i].arrive_time)
+            print('\t', route.locations[i].name, "->", route.locations[i+1].name, route.route_legs[i].depart_time.time(), "->", route.route_legs[i].arrive_time.time())
 
 
 def to_work_options(leave=None, verbose=False) -> Route:

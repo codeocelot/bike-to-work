@@ -10,6 +10,7 @@ def parse_args():
     parser.add_argument('--direction', type=str, required=False, default='work', help="Direction to calculate route for. Must be 'work' or 'home', defaults to 'work'")
     parser.add_argument('-v', '--verbose', action='store_true', help="Print more detailed route information")
     parser.add_argument('--leave', type=str, required=False, help="Time to leave in 'YYYY-MM-DD HH:MM:SS' format")
+    parser.add_argument('-c', '--count', type=int, required=False, default=1, help="Number of routes to display")
     args = parser.parse_args()
     return args
 
@@ -35,7 +36,11 @@ if __name__ == '__main__':
         raise ValueError("Invalid direction. Must be 'work' or 'home'")
     route = get_options(args.direction, leave_by, verbose=args.verbose)
     must_leave_by = route.leave_by()
-    print("After that:")
-    print("---------------")
-    route2 = get_options(args.direction, must_leave_by + timedelta(seconds=1), verbose=args.verbose)
-    leave_by2 = route2.leave_by()
+    count = args.count
+    for i in range(count - 1):
+        print("---------------")
+        print("After that:")
+        route = get_options(args.direction, must_leave_by + timedelta(seconds=1), verbose=args.verbose)
+        must_leave_by = route.leave_by()
+
+
