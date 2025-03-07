@@ -42,13 +42,13 @@ export MAPS_API_KEY=...
 ### Run
 
 ```bash
-python -m bike2work --direction work
+bike2work --direction work
 ```
 
 ### Options
 
 ```bash
-usage: __main__.py [-h] [--direction DIRECTION] [-v] [--leave LEAVE] [-c COUNT]
+usage: bike2work [-h] [--direction DIRECTION] [-v] [--leave LEAVE] [-c COUNT]
 
 options:
   -h, --help            show this help message and exit
@@ -60,10 +60,10 @@ options:
                         Number of routes to display
 ```
 
-### Examples
+### Example
 
 ```bash
-python -m bike2work --direction work -c 3 -v
+bike2work --direction work --count 3 --verbose
 
 Take 19th, train leaves at 10:52:46, arrive @ Office by 11:13:41
 	 Home -> 19th 10:36:39.650759 -> 10:51:36.650759
